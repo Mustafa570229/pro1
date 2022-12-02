@@ -1,90 +1,66 @@
-import React, { useState } from "react";
-import TodoForm from "./components/ToDoForm";
-import "./components/App.css";
-import TodoComp from "./components/TodoComp";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import PokemonList from "./components/PokemonList";
+import Button from "react-bootstrap/Button";
 
 const App = () => {
-  let [todos, setTodos] = useState([]);
-  const [todoToShow, setTodoToShow] = useState("all");
-  
+  const [pokemon, setPokemon] = useState([]);
+  const [loading, setloading] = useState(true);
+  const [currentPageUrl, setCurrentPageUrl] = useState(
+    "https://pokeapi.co/api/v2/pokemon"
+  );
+  const [nextPageUrl, setNextPageUrl] = useState();
+  const [prevPageUrl, setPrevPageUrl] = useState();
 
-  const AddTodo = (todo) => {
-    setTodos([todo, ...todos]);
-  };
-  const toggle=(id)=>{
-    setTodos(todos.map((todo)=>{
-      if(todo.id===id){
-        return{
-        ...todo,
-        compelet:!todo.compelet,
-      }}
-      else{
-        return todo
-      }
-    })
-
-    )
-  }
-  const updateToShow = (s) => {
-    setTodoToShow(s);
-  };
-  if (todoToShow === "active") {
-    todos = todos.filter((todo) => {
-      return !todo.compelet;
-    });
-  } else if (todoToShow === "compelet") {
-    todos = todos.filter((todo) => {
-      return todo.compelet;
-    });
-  }
-  const removeAllCompeleteTodos=()=>{
-    setTodos(todos.filter((todo)=>{
-      return !todo.compelet
-    }))
-  }
-  const handelDelete = (id) => {
-    setTodos(
-      todos.filter((todo) => {
-        return todo.id !== id;
+  useEffect(() => {
+    let cancel;
+    axios
+      .get(currentPageUrl, {
+        cancelToken: new axios.CancelToken((c) => (cancel = c)),
       })
-    );
-  };
-  return (
-    <div className="container">
-      <TodoForm OnSubmit={AddTodo} />
-      {todos.map((todo) => {
-        return (
-          <div>
-            <TodoComp
-              key={todo.id}
-              todo={todo}
-              onDelete={() => {
-                handelDelete(todo.id);
-              }}
-              toggle={()=>toggle(todo.id)}
-            />
-          </div>
-        );
-      })}
-      <div>
-        <button className="update-btn btn" onClick={() => updateToShow("all")}> All</button>
-        <button className="update-btn btn"onClick={() => updateToShow("active")}
-        >
-          Active
-        </button>
-        <button
-          className="update-btn btn"
-          onClick={() => updateToShow("compelet")}
-        >
-          Compelet
-        </button>
+      .then((response) => {
+        setPokemon(response.data.results.map((p) => p.name));
+        setNextPageUrl(response.data.next);
+        setPrevPageUrl(response.data.previous);
+        setloading(false);
+      })
+      .catch((err) => {
+        console.log(err);
+        setloading(false);
+      });
+    return () => {
+      cancel();
+    };
+  }, [currentPageUrl]);
 
-      </div>
-      <button className="all-btn btn" onClick={removeAllCompeleteTodos}>Remove all compelete todos</button>
-     
-    </div>
+  const prevFun = () => {
+    setCurrentPageUrl(prevPageUrl);
+  };
+  const nextFun = () => {
+    setCurrentPageUrl(nextPageUrl);
+  };
+
+  if (loading)
+    return (
+      <h3 style={{ color: "red" }} h1>
+        loading...
+      </h3>
+    );
+  return (
+    <>
+      <PokemonList pokemon={pokemon} />
+      {prevPageUrl && (
+        <Button onClick={prevPageUrl ? prevFun : null}>prev</Button>
+      )}
+
+      <Button
+        style={{ opacity: nextPageUrl ? "1" : "0", marginLeft: "20px" }}
+        onClick={nextPageUrl ? nextFun : null}
+      >
+        next
+      </Button>
+    </>
   );
 };
-
 
 export default App;
